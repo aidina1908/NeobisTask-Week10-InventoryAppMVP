@@ -1,21 +1,33 @@
 package com.example.android.inventoryappmvp.edit;
 
-import com.example.android.inventoryappmvp.Inventory;
+import android.view.MenuItem;
+import com.example.android.inventoryappmvp.BasePresenter;
+import com.example.android.inventoryappmvp.BaseView;
+import com.example.android.inventoryappmvp.data.Inventory;
 
 public class EditContract {
-    interface Presenter{
-      //  boolean validateInputs(String name, double price, String supplier, int quantity);
-        void saveInventory(Inventory inventory);
-        void update(Inventory inventory);
-        void delete(String name, double price, String supplier, int quantity);
+    interface Presenter extends BasePresenter {
+        void save(Inventory inventory);
 
+        boolean validate(Inventory inventory);
+
+        void deleteInventory(long id);
+
+        void getInventoryAndPopulate(long id);
+
+        void update(Inventory inventory);
     }
-    interface View{
-        void showData(String name, double price, String supplier, int quantity);
-        void initViews();
-        void showAlertDialog();
+
+    interface View extends BaseView<Presenter> {
+
+        void showErrorMessage(int field);
+
+        void clearPreErrors();
+
+        boolean onOptionsItemSelected(MenuItem item);
+
         void close();
 
-
+        void populate(Inventory inventory);
     }
 }

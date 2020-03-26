@@ -2,118 +2,174 @@ package com.example.android.inventoryappmvp.edit;
 
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.NumberPicker;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.example.android.inventoryappmvp.Inventory;
+import androidx.appcompat.widget.Toolbar;
+import com.example.android.inventoryappmvp.data.Inventory;
 import com.example.android.inventoryappmvp.R;
 import com.example.android.inventoryappmvp.data.InventoryDatabase;
+import com.example.android.inventoryappmvp.main.MainContract;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textfield.TextInputLayout;
 
 
 public class EditActivity extends AppCompatActivity implements EditContract.View {
-    public static final String EXTRA_ID =
-            "com.example.android.inventoryappmvp.EXTRA_ID";
-    public static final String EXTRA_NAME =
-            "com.example.android.inventoryappmvp.EXTRA_NAME";
-    public static final String EXTRA_IMAGE =
-            "com.example.android.inventoryappmvp.EXTRA_IMAGE";
-    public static final String EXTRA_PRICE =
-            "com.example.android.inventoryappmvp.EXTRA_PRICE";
-    public static final String EXTRA_QUANTITY =
-            "com.example.android.inventoryappmvp.EXTRA_QUANTITY";
-    public static final String EXTRA_SUPPLIER =
-            "com.example.android.inventoryappmvp.EXTRA_SUPPLIER";
 
-    EditContract.Presenter presenter;
-    InventoryDatabase database;
-    private Inventory inventory;
+    public static final int EXTRA_NAME = 10;
+    public static final int EXTRA_PRICE = 11;
+    public static final int EXTRA_SUPPLIER = 12;
+    final int CAMERA_INTENT = 51;
+    public static final String EXTRA_ID = "extra_id";
 
-    private ImageView productImageView;
+    private EditContract.Presenter mPresenter;
+   // private ImageView mProductImage;
     //Button button;
-    Bitmap bmpImage;
-    private EditText editTextName;
-    private EditText editTextPrice;
-    private EditText editTextSupplier;
-    private NumberPicker numberPickerQuantity;
+    //Bitmap bmpImage;
+    private EditText mNameEditText;
+    private EditText mPriceEditText;
+    private EditText mSupplierEditText;
+    private EditText mQuantityEditText;
+    private FloatingActionButton mFab;
+
+    private TextInputLayout nameTextLayout;
+    private TextInputLayout priceTextLayout;
+    private TextInputLayout quantityTextLayout;
+    private TextInputLayout supplierTextLayout;
+
+    private Inventory inventory;
+    private boolean mEditMode = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.edit_activity);
+
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        inventory = new Inventory();
+        checkMode();
         initViews();
-//        presenter = new EditPresenter(this,getApplicationContext());
-       // InventoryDatabase.getInstance(getApplicationContext()).inventoryDao().insert(inventory);
 
-        numberPickerQuantity.setMinValue(1);
-        numberPickerQuantity.setMaxValue(100);
-
-        getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_arrow_back);
-
-        Intent intent = getIntent();
-        if (intent.hasExtra(EXTRA_ID)) {
-            setTitle("Edit Product");
-            editTextName.setText(intent.getStringExtra(EXTRA_NAME));
-            //   productImageView.setImage(DataConverter.convertImage2ByteArray(bmpImage));
-            // productImageView.setImageBitmap(bmpImage);
-            editTextPrice.setText(String.valueOf(intent.getDoubleExtra(EXTRA_PRICE, 1)));
-            numberPickerQuantity.setValue(intent.getIntExtra(EXTRA_QUANTITY, 1));
-            editTextSupplier.setText((intent.getStringExtra(EXTRA_SUPPLIER)));
-        } else {
-            setTitle("Add Product");
-
-        }
+        InventoryDatabase db = InventoryDatabase.getInstance(getApplication());
+        mPresenter = new EditPresenter(this, db.inventoryDao());
     }
 
     @Override
-    public void initViews(){
-        productImageView = findViewById(R.id.image);
-        // button = findViewById(R.id.button_camera);
-        bmpImage = null;
-        editTextName = findViewById(R.id.edit_text_name);
-        editTextPrice = findViewById(R.id.edit_text_price);
-        editTextSupplier = findViewById(R.id.edit_text_supplier);
-        numberPickerQuantity = findViewById(R.id.number_picker_quantity);
-    }
-
-
-    @Override
-    public void showData(String name, double price, String supplier, int quantity){
-        editTextName.setText(name);
-        editTextPrice.setText(String.valueOf(price));
-        editTextSupplier.setText(supplier);
-        numberPickerQuantity.setValue(quantity);
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater menuInflater = getMenuInflater();
-        menuInflater.inflate(R.menu.edit_menu, menu);
+    public boolean onCreateOptionsMenu(Menu menu){
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.edit_menu, menu);
         return true;
     }
 
     @Override
+    protected void onStart() {
+        setTitle("Add Product");
+        super.onStart();
+        if (mEditMode) {
+            mPresenter.getInventoryAndPopulate(inventory.id);
+        }
+    }
+
+    private void checkMode() {
+        setTitle("Edit Product");
+        if (getIntent().getExtras() != null) {
+            inventory.id = getIntent().getLongExtra(EXTRA_ID, 0);
+            mEditMode = true;
+        }
+    }
+
+    private void initViews() {
+        mNameEditText = (EditText) findViewById(R.id.edit_text_name);
+        mPriceEditText = (EditText) findViewById(R.id.edit_text_price);
+        mSupplierEditText = (EditText) findViewById(R.id.edit_text_supplier);
+        mQuantityEditText = (EditText) findViewById(R.id.edit_text_quantity);
+       // mProductImage = (ImageView) findViewById(R.id.productImage);
+        //button = (Button) findViewById(R.id.button_camera);
+
+        nameTextLayout = (TextInputLayout) findViewById(R.id.nameTextLayout);
+        priceTextLayout = (TextInputLayout) findViewById(R.id.priceTextLayout);
+        quantityTextLayout = (TextInputLayout)findViewById(R.id.quantityTextLayout);
+        supplierTextLayout = (TextInputLayout)findViewById(R.id.supplierTextLayout);
+
+        mFab = (FloatingActionButton) findViewById(R.id.fabbutton);
+        mFab.setImageResource(mEditMode ? R.drawable.ic_refresh : R.drawable.ic_done);
+        mFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+               // inventory.image = mProductImage.getImageAlpha();
+                inventory.name = mNameEditText.getText().toString();
+               // inventory.price = Double.parseDouble(mPriceEditText.getText().toString());
+               // inventory.price = Double.parseDouble(mPriceEditText.getText().toString());
+                inventory.price = mPriceEditText.getText().toString();
+                inventory.supplier = mSupplierEditText.getText().toString();
+                inventory.quantity = mQuantityEditText.getText().toString();
+
+                boolean valid = mPresenter.validate(inventory);
+                if (!valid) return;
+                if (mEditMode) {
+                    mPresenter.update(inventory);
+                } else {
+                    mPresenter.save(inventory);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void setPresenter(EditContract.Presenter presenter) {
+        mPresenter = presenter;
+    }
+
+    @Override
+    public void showErrorMessage(int field) {
+        if (field == EXTRA_NAME) {
+            mNameEditText.setError(getString(R.string.invalid_name));
+        } else if (field == EXTRA_PRICE) {
+            mPriceEditText.setError(getString(R.string.invalid_price));
+        } else if (field == EXTRA_SUPPLIER) {
+            mSupplierEditText.setError(getString(R.string.invalid_supplier));
+        }
+    }
+
+    @Override
+    public void clearPreErrors() {
+        nameTextLayout.setErrorEnabled(false);
+        priceTextLayout.setErrorEnabled(false);
+        supplierTextLayout.setErrorEnabled(false);
+        quantityTextLayout.setErrorEnabled(false);
+    }
+
+    @Override
+    public void close() {
+        finish();
+    }
+
+    @Override
+    public void populate(Inventory inventory) {
+        this.inventory = inventory;
+       // mProductImage.setImageResource(inventory.image);
+        mNameEditText.setText(inventory.name);
+        mPriceEditText.setText(String.valueOf(inventory.price));
+        mSupplierEditText.setText(inventory.supplier);
+        mQuantityEditText.setText(inventory.quantity);
+    }
+
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.action_save:
-                presenter.saveInventory(inventory);
-                return true;
             case R.id.action_delete:
                 showAlertDialog();
                 return true;
             default:
-                return super.onOptionsItemSelected(item);
-        }
-
-    }
+                return super.onOptionsItemSelected(item);}}
 
     public void showAlertDialog() {
         AlertDialog.Builder alert = new AlertDialog.Builder(this);
@@ -123,7 +179,7 @@ public class EditActivity extends AppCompatActivity implements EditContract.View
 
             @Override
             public void onClick(DialogInterface dialog, int i) {
-               // database.inventoryDao().delete();
+              //  mPresenter.deleteInventory(long id);
             }
         });
         alert.setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -131,13 +187,30 @@ public class EditActivity extends AppCompatActivity implements EditContract.View
             @Override
             public void onClick(DialogInterface dialog, int which) {
             }
-
         });
         alert.create().show();
     }
 
-    @Override
-    public void close(){
-        finish();
+    public void takePicture(View view) {
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            startActivityForResult(intent, CAMERA_INTENT);
+        }
     }
+
+   /* @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case CAMERA_INTENT:
+                bmpImage = (Bitmap) data.getExtras().get("data");
+                if (bmpImage != null) {
+                    mProductImage.setImageBitmap(bmpImage);
+                } else {
+                    Toast.makeText(this, "Bitmap is null", Toast.LENGTH_SHORT).show();
+
+                }
+                break;
+        }
+    }*/
 }

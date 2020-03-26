@@ -1,18 +1,45 @@
 package com.example.android.inventoryappmvp.main;
 
-import android.content.Intent;
+import android.view.MenuItem;
+import com.example.android.inventoryappmvp.BasePresenter;
+import com.example.android.inventoryappmvp.BaseView;
+import com.example.android.inventoryappmvp.data.Inventory;
 
-public class MainContract {
-    interface Presenter {
-        void deleteAllInventories(String name, double price, String supplier, int quantity);
-        void onActivityResult(int requestCode, int resultCode, Intent data);
-        void update();
-        void insert();
+import java.util.List;
 
+public interface MainContract {
+
+    interface Presenter extends BasePresenter {
+
+        void addNewInventory();
+
+        void result(int requestCode, int resultCode);
+
+        void populatePeople();
+
+        void openEditScreen(Inventory inventory);
+
+        void deleteAllInventories();
     }
 
-    interface View{
+    interface View extends BaseView<Presenter> {
+
+       void showAddInventory();
+
+        void setInventories(List<Inventory> inventories);
+
+        void showEditScreen(long id);
+
+        void showEmptyMessage();
+
         void showAlertDialog();
+    }
+
+    interface OnItemClickListener {
+
+        void clickItem(Inventory inventory);
+
+        boolean onOptionsItemSelected(MenuItem item);
 
     }
 }

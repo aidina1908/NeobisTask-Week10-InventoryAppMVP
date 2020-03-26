@@ -1,84 +1,60 @@
 package com.example.android.inventoryappmvp.main;
 
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.widget.Toast;
+import androidx.annotation.Nullable;
+import androidx.lifecycle.Observer;
 
-import androidx.appcompat.app.AlertDialog;
-
-import com.example.android.inventoryappmvp.Inventory;
+import com.example.android.inventoryappmvp.data.Inventory;
 import com.example.android.inventoryappmvp.data.InventoryDao;
-import com.example.android.inventoryappmvp.data.InventoryDatabase;
-import com.example.android.inventoryappmvp.edit.EditActivity;
+import java.util.List;
+
 
 public class MainPresenter implements MainContract.Presenter {
 
-    public static final int ADD_INVENTORY_REQUEST = 1;
-    public static final int EDIT_INVENTORY_REQUEST = 2;
-    private static final int RESULT_OK = 1;
+    private final MainContract.View mView;
+    private final InventoryDao inventoryDao;
 
-    MainContract.View view;
-    InventoryDao inventoryDao;
-    Context context;
-    InventoryDatabase database = InventoryDatabase.getInstance(context);
-
-    public MainPresenter(MainContract.View view, Context context) {
-        this.view = view;
-        this.context = context;
+    public MainPresenter(MainContract.View view, InventoryDao inventoryDao) {
+        this.mView = view;
+        this.mView.setPresenter(this);
         this.inventoryDao = inventoryDao;
     }
 
     @Override
-    public void deleteAllInventories(String name, double price, String supplier, int quantity) {
-        view.showAlertDialog();
-        database.inventoryDao().deleteAllInventories();
+    public void start() {
 
     }
 
     @Override
-    public void update() {
+    public void addNewInventory() {
+        mView.showAddInventory();
+    }
+
+    @Override
+    public void result(int requestCode, int resultCode) {
 
     }
 
     @Override
-    public void insert() {
-
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if(requestCode == ADD_INVENTORY_REQUEST && resultCode == RESULT_OK){
-            String name = data.getStringExtra(EditActivity.EXTRA_NAME);
-           // byte [] image = data.getByteArrayExtra(EditActivity.EXTRA_IMAGE);
-            double price = data.getDoubleExtra(EditActivity.EXTRA_PRICE, 1);
-            int quantity = data.getIntExtra(EditActivity.EXTRA_QUANTITY,1);
-            String supplier = data.getStringExtra(EditActivity.EXTRA_SUPPLIER);
-
-            Inventory inventory = new Inventory(name, quantity, price, supplier);
-            database.inventoryDao().insert(inventory);
-
-            Toast.makeText(this.context, "Product saved", Toast.LENGTH_SHORT).show();
-        }else  if(requestCode == EDIT_INVENTORY_REQUEST && resultCode == RESULT_OK) {
-            int id = data.getIntExtra(EditActivity.EXTRA_ID,-1);
-
-            if (id == -1){
-                Toast.makeText(this.context,"Inventory can't be updated", Toast.LENGTH_SHORT).show();
-                return;
+    public void populatePeople() {
+        inventoryDao.findAllInventories().observeForever(new Observer<List<Inventory>>() {
+            @Override
+            public void onChanged(@Nullable List<Inventory> inventories) {
+                mView.setInventories(inventories);
+                if (inventories == null || inventories.size() < 1) {
+                    mView.showEmptyMessage();
+                }
             }
+        });
+    }
 
-            String name = data.getStringExtra(EditActivity.EXTRA_NAME);
-           // byte [] image = data.getByteArrayExtra(EditActivity.EXTRA_IMAGE);
-            double price = data.getDoubleExtra(EditActivity.EXTRA_PRICE, 1);
-            int quantity = data.getIntExtra(EditActivity.EXTRA_QUANTITY,1);
-            String supplier = data.getStringExtra(EditActivity.EXTRA_SUPPLIER);
+    @Override
+    public void openEditScreen(Inventory inventory) {
+        mView.showEditScreen(inventory.id);
+    }
 
-            Inventory inventory = new Inventory(name, quantity, price, supplier);
-            inventory.setId(id);
-            database.inventoryDao().update(inventory);
 
-        }else {
-            Toast.makeText(this.context, "Product not saved", Toast.LENGTH_SHORT).show();
-        }
-    };
- }
+    @Override
+    public void deleteAllInventories() {
+        inventoryDao.deleteAllInventories();
+    }
+}

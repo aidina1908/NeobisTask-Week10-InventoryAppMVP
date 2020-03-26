@@ -3,88 +3,119 @@ package com.example.android.inventoryappmvp.main;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import com.example.android.inventoryappmvp.Inventory;
-import com.example.android.inventoryappmvp.InventoryAdapter;
+import com.example.android.inventoryappmvp.data.Inventory;
 import com.example.android.inventoryappmvp.R;
 import com.example.android.inventoryappmvp.data.InventoryDatabase;
 import com.example.android.inventoryappmvp.edit.EditActivity;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
+import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements MainContract.View, MainContract.OnItemClickListener{
 
-    InventoryDatabase database;
-    public static final int ADD_INVENTORY_REQUEST = 1;
-    public static final int EDIT_INVENTORY_REQUEST = 2;
+    public static final String EXTRA_ID = "inventory_id";
+    private MainContract.Presenter mPresenter;
+    private InventoryAdapter inventoryAdapter;
 
-    MainContract.Presenter presenter;
+    private TextView mEmptyTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        RecyclerView recyclerView = findViewById(R.id.recycler_view);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.setHasFixedSize(true);
-
-        final InventoryAdapter adapter = new InventoryAdapter();
-        recyclerView.setAdapter(adapter);
-
-       // presenter = new MainPresenter(this, getApplicationContext());
-
-
-        FloatingActionButton fab = findViewById(R.id.fab);
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, EditActivity.class);
-                startActivityForResult(intent, ADD_INVENTORY_REQUEST);
+            public void onClick(View v) {
+                mPresenter.addNewInventory();
             }
         });
 
-        adapter.setOnItemClickListener(new InventoryAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(Inventory inventory) {
-                Intent intent = new Intent(MainActivity.this, EditActivity.class);
-                intent.putExtra(EditActivity.EXTRA_ID,inventory.getId());
-               // intent.putExtra(EditActivity.EXTRA_IMAGE,inventory.getImage());
-                intent.putExtra(EditActivity.EXTRA_NAME,inventory.getName());
-                intent.putExtra(EditActivity.EXTRA_PRICE,inventory.getPrice());
-                intent.putExtra(EditActivity.EXTRA_QUANTITY,inventory.getQuantity());
-                intent.putExtra(EditActivity.EXTRA_SUPPLIER,inventory.getSupplier());
-                startActivityForResult(intent, EDIT_INVENTORY_REQUEST);
-            }
-        });
+        mEmptyTextView = (TextView) findViewById(R.id.emptyTextView);
+
+        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        inventoryAdapter = new InventoryAdapter(this);
+        recyclerView.setAdapter(inventoryAdapter);
+
+        InventoryDatabase db = InventoryDatabase.getInstance(getApplication());
+        mPresenter = new MainPresenter(this, db.inventoryDao());
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu){
-        MenuInflater menuInflater = getMenuInflater();
-        menuInflater.inflate(R.menu.menu_main, menu);
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_main, menu);
         return true;
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item){
-        switch (item.getItemId()){
+    protected void onStart() {
+        super.onStart();
+        mPresenter.populatePeople();
+    }
+
+    @Override
+    public void showAddInventory() {
+        Intent intent = new Intent(MainActivity.this, EditActivity.class);
+        startActivity(intent);
+    }
+
+    @Override
+    public void setInventories(List<Inventory> inventories) {
+        mEmptyTextView.setVisibility(View.GONE);
+        inventoryAdapter.setValues(inventories);
+    }
+
+    @Override
+    public void showEditScreen(long id) {
+        Intent intent = new Intent(MainActivity.this, EditActivity.class);
+        intent.putExtra(EXTRA_ID, id);
+        startActivity(intent);
+    }
+
+    @Override
+    public void showEmptyMessage() {
+        mEmptyTextView.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void setPresenter(MainContract.Presenter presenter) {
+        mPresenter = presenter;
+    }
+
+    @Override
+    public void clickItem(Inventory inventory) {
+        mPresenter.openEditScreen(inventory);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
             case R.id.delete_all:
                 showAlertDialog();
                 return true;
-            default: return super.onOptionsItemSelected(item);
-
+            default:
+                return super.onOptionsItemSelected(item);
         }
     }
+
     public void showAlertDialog(){
         AlertDialog.Builder alert = new AlertDialog.Builder(this);
         alert.setTitle("Delete");
@@ -92,8 +123,7 @@ public class MainActivity extends AppCompatActivity {
         alert.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int i) {
-                database.inventoryDao().deleteAllInventories();
-
+                mPresenter.deleteAllInventories();
             }
         });
         alert.setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -104,5 +134,4 @@ public class MainActivity extends AppCompatActivity {
         });
         alert.create().show();
     }
-
 }

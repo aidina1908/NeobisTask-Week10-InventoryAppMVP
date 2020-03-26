@@ -3,37 +3,40 @@ package com.example.android.inventoryappmvp.data;
 import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
 import androidx.room.Delete;
-import androidx.room.Ignore;
 import androidx.room.Insert;
 import androidx.room.Query;
 import androidx.room.Update;
 
-import com.example.android.inventoryappmvp.Inventory;
-
 import java.util.List;
+import static androidx.room.OnConflictStrategy.IGNORE;
 
-    @Dao
+@Dao
     public interface InventoryDao {
 
-        @Insert
-        long insert(Inventory inventory);
+        @Insert(onConflict = IGNORE)
+        long insertInventory(Inventory inventory);
 
         @Update
-        int update(Inventory inventory);
+        int updateInventory(Inventory inventory);
+
+        @Update
+        void updateInventory(List<Inventory> inventories);
 
         @Delete
-        void delete(Inventory inventory);
+        void deleteInventory(Inventory inventory);
 
-        @Query("DELETE FROM product_table WHERE id = :id")
-        void delete(long id);
+        @Query("SELECT * FROM product_table WHERE id=:id")
+        Inventory findInventoryById(String id);
+
+        @Query("SELECT * FROM product_table WHERE id = :id")
+        Inventory findInventory(long id);
 
         @Query("DELETE FROM product_table WHERE name = :name  AND price=:price AND quantity = :quantity AND supplier = :supplier")
         void deleteInventory(String name, double price, int quantity, String supplier);
-
 
         @Query("DELETE FROM product_table")
         void deleteAllInventories();
 
         @Query("SELECT * FROM product_table ORDER BY quantity DESC")
-        LiveData<List<Inventory>>getAllInventories();
+        LiveData<List<Inventory>>findAllInventories();
 }
